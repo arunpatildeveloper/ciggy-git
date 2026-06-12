@@ -7,7 +7,7 @@
 import { useState, useRef, useEffect } from 'react'
 import AdminLayout from './AdminLayout'
 import useProductStore, { generateId, formatPrice } from '../store/productStore'
-import { compressImage } from '../utils/compressImage'
+import { uploadImage } from '../utils/uploadImage'
 import styles from './AdminProductsPage.module.css'
 
 const EMPTY = {
@@ -34,7 +34,7 @@ const AdminProductsPage = () => {
 
   useEffect(() => { fetchProducts() }, [])
 
-  // Storage health check — shows on page so you can see it on mobile
+  // Storage health check
   const storageWorks = (() => {
     try {
       localStorage.setItem('__test__', '1')
@@ -43,9 +43,6 @@ const AdminProductsPage = () => {
       return ok
     } catch { return false }
   })()
-
-  // Check if there's a mismatch (store has products but localStorage is empty)
-  const storageMismatch = products.length > 0 && !localStorage.getItem('ciggy_products')
 
   const change = (e) => {
     const { name, value } = e.target
@@ -136,27 +133,7 @@ const AdminProductsPage = () => {
             ⚠️ localStorage is not working in this browser. Try Chrome (not private mode).
           </div>
         )}
-        {storageMismatch && (
-          <div style={{ background: '#3a2a10', border: '1px solid #8B6030', padding: '12px 16px', marginBottom: '16px', fontSize: '0.78rem', color: '#e8c0a0', lineHeight: 1.6 }}>
-            ⚠️ Products are in memory but not saving to storage. This is usually caused by uploaded images being too large.
-            <strong style={{ display: 'block', marginTop: '6px' }}>Use image URLs instead of uploading files, or add products without images first.</strong>
-          </div>
-        )}
 
-        {/* Debug panel — shows raw localStorage value */}
-        <details style={{ marginBottom: '16px', fontSize: '0.72rem', color: '#555' }}>
-          <summary style={{ cursor: 'pointer', padding: '6px 0' }}>Debug info</summary>
-          <div style={{ background: '#0d0d0d', border: '1px solid #1e1e1e', padding: '12px', marginTop: '8px', wordBreak: 'break-all', color: '#888', lineHeight: 1.6 }}>
-            <p>localStorage works: <strong style={{ color: storageWorks ? '#5a8a4a' : '#a05050' }}>{String(storageWorks)}</strong></p>
-            <p>Products in store: <strong style={{ color: '#e8e4dc' }}>{products.length}</strong></p>
-            <p>Raw localStorage key <code>ciggy_products</code>:</p>
-            <p style={{ color: '#666', fontSize: '0.68rem', marginTop: '4px' }}>
-              {localStorage.getItem('ciggy_products')
-                ? `${localStorage.getItem('ciggy_products').slice(0, 120)}…`
-                : 'null / empty'}
-            </p>
-          </div>
-        </details>
 
         {/* Form */}
         {view === 'form' && (
@@ -276,24 +253,23 @@ const AdminProductsPage = () => {
   )
 }
 
-/* ---- Image picker ---- */
+/* ---- Image picker — uploads to Supabase Storage ---- */
 const ImagePicker = ({ value, onChange, onClear }) => {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
+  const [uploadErr, setUploadErr] = useState('')
   const ref = useRef(null)
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
     setLoading(true)
-    try {
-      const compressed = await compressImage(file)
-      onChange(compressed)
-    } catch {
-      // fallback to raw FileReader if compression fails
-      const reader = new FileReader()
-      reader.onload = (ev) => onChange(ev.target.result)
-      reader.readAsDataURL(file)
+    setUploadErr('')
+    const result = await uploadImage(file)
+    if (result.error) {
+      setUploadErr('Upload failed: ' + result.error)
+    } else {
+      onChange(result.url)
     }
     setLoading(false)
     e.target.value = ''
@@ -311,8 +287,9 @@ const ImagePicker = ({ value, onChange, onClear }) => {
       ) : (
         <>
           <button type="button" className={styles.uploadBtn} onClick={() => ref.current?.click()} disabled={loading}>
-            {loading ? 'Compressing…' : 'Upload from device'}
+            {loading ? 'Uploading…' : 'Upload from device'}
           </button>
+          {uploadErr && <p style={{ fontSize: '0.72rem', color: '#a05050' }}>{uploadErr}</p>}
           <input ref={ref} type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
           <div className={styles.urlRow}>
             <input type="url" placeholder="Or paste image URL…" value={url}
@@ -327,31 +304,28 @@ const ImagePicker = ({ value, onChange, onClear }) => {
   )
 }
 
-/* ---- Gallery picker ---- */
+/* ---- Gallery picker — uploads to Supabase Storage ---- */
 const GalleryPicker = ({ images, onChange }) => {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
+  const [uploadErr, setUploadErr] = useState('')
   const ref = useRef(null)
 
   const addFiles = async (e) => {
     const files = Array.from(e.target.files || [])
     if (!files.length) return
     setLoading(true)
-    try {
-      const compressed = await Promise.all(files.map((f) => compressImage(f)))
-      onChange([...images, ...compressed])
-    } catch {
-      // fallback
-      let done = 0; const results = []
-      files.forEach((f) => {
-        const reader = new FileReader()
-        reader.onload = (ev) => {
-          results.push(ev.target.result)
-          if (++done === files.length) onChange([...images, ...results])
-        }
-        reader.readAsDataURL(f)
-      })
+    setUploadErr('')
+    const results = []
+    for (const file of files) {
+      const result = await uploadImage(file)
+      if (result.error) {
+        setUploadErr('One or more uploads failed.')
+      } else {
+        results.push(result.url)
+      }
     }
+    if (results.length) onChange([...images, ...results])
     setLoading(false)
     e.target.value = ''
   }
@@ -372,8 +346,9 @@ const GalleryPicker = ({ images, onChange }) => {
         </div>
       )}
       <button type="button" className={styles.uploadBtn} onClick={() => ref.current?.click()} disabled={loading}>
-        {loading ? 'Compressing…' : 'Upload images'}
+        {loading ? 'Uploading…' : 'Upload images'}
       </button>
+      {uploadErr && <p style={{ fontSize: '0.72rem', color: '#a05050' }}>{uploadErr}</p>}
       <input ref={ref} type="file" accept="image/*" multiple onChange={addFiles} style={{ display: 'none' }} />
       <div className={styles.urlRow}>
         <input type="url" placeholder="Paste image URL…" value={url}
