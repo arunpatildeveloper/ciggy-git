@@ -7,7 +7,7 @@
 import { useState, useRef, useEffect } from 'react'
 import AdminLayout from './AdminLayout'
 import useProductStore, { generateId, formatPrice } from '../store/productStore'
-import { uploadImage } from '../utils/uploadImage'
+import { uploadImage, deleteImage } from '../utils/uploadImage'
 import styles from './AdminProductsPage.module.css'
 
 const EMPTY = {
@@ -237,6 +237,9 @@ const AdminProductsPage = () => {
                       className={styles.delBtn}
                       onClick={async () => {
                         if (window.confirm(`Delete "${p.name}"?`)) {
+                          // Delete all images from storage first
+                          if (p.mainImage) await deleteImage(p.mainImage)
+                          for (const img of (p.extraImages || [])) await deleteImage(img)
                           const { error } = await deleteProduct(p.id)
                           if (error) alert('Delete failed: ' + error.message)
                         }
@@ -265,6 +268,8 @@ const ImagePicker = ({ value, onChange, onClear }) => {
     if (!file) return
     setLoading(true)
     setUploadErr('')
+    // If replacing an existing image, delete the old one first
+    if (value) await deleteImage(value)
     const result = await uploadImage(file)
     if (result.error) {
       setUploadErr('Upload failed: ' + result.error)
@@ -275,6 +280,12 @@ const ImagePicker = ({ value, onChange, onClear }) => {
     e.target.value = ''
   }
 
+  const handleClear = async () => {
+    // Delete from storage before clearing
+    if (value) await deleteImage(value)
+    onClear()
+  }
+
   const handleUrl = () => { if (url.trim()) { onChange(url.trim()); setUrl('') } }
 
   return (
@@ -282,7 +293,7 @@ const ImagePicker = ({ value, onChange, onClear }) => {
       {value ? (
         <div className={styles.imgPreview}>
           <img src={value} alt="Preview" />
-          <button type="button" className={styles.removeImg} onClick={onClear}>×</button>
+          <button type="button" className={styles.removeImg} onClick={handleClear}>×</button>
         </div>
       ) : (
         <>
@@ -331,7 +342,10 @@ const GalleryPicker = ({ images, onChange }) => {
   }
 
   const addUrl = () => { if (url.trim()) { onChange([...images, url.trim()]); setUrl('') } }
-  const remove = (i) => onChange(images.filter((_, idx) => idx !== i))
+  const remove = async (i) => {
+    await deleteImage(images[i]) // delete from storage
+    onChange(images.filter((_, idx) => idx !== i))
+  }
 
   return (
     <div className={styles.imgPicker}>

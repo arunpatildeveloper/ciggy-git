@@ -1,32 +1,28 @@
 /* ============================================
-   CIGGY — Upload image to Supabase Storage
-   Returns the public CDN URL.
-   Bucket: product-images (must be public)
+   CIGGY — Image upload + delete utilities
+   Uses Supabase Storage bucket: product-images
    ============================================ */
 
 import { supabase } from '../lib/supabase'
 import { compressImage } from './compressImage'
 
+/* Upload a file — returns { url } or { error } */
 export const uploadImage = async (file) => {
-  // Compress first to reduce upload size
   let uploadFile = file
   try {
     const compressed = await compressImage(file, 1200, 0.82)
-    // Convert base64 back to blob for upload
     const res = await fetch(compressed)
     uploadFile = await res.blob()
   } catch {
-    uploadFile = file // fallback to original if compression fails
+    uploadFile = file
   }
 
-  // Unique filename: timestamp + random + original extension
   const ext = file.name.split('.').pop() || 'jpg'
   const filename = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`
-  const path = filename  // store directly in bucket root
 
   const { error } = await supabase.storage
     .from('product-images')
-    .upload(path, uploadFile, {
+    .upload(filename, uploadFile, {
       contentType: uploadFile.type || 'image/jpeg',
       upsert: false,
     })
@@ -36,10 +32,26 @@ export const uploadImage = async (file) => {
     return { error: error.message }
   }
 
-  // Get the public URL
   const { data } = supabase.storage
     .from('product-images')
-    .getPublicUrl(path)
+    .getPublicUrl(filename)
 
   return { url: data.publicUrl }
+}
+
+/* Delete an image from storage by its public URL.
+   Only deletes if the URL is from our own Supabase bucket — ignores external URLs. */
+export const deleteImage = async (url) => {
+  if (!url) return
+  // Only delete if it's a Supabase Storage URL for our bucket
+  const marker = '/object/public/product-images/'
+  const idx = url.indexOf(marker)
+  if (idx === -1) return // external URL — don't touch it
+
+  const path = url.slice(idx + marker.length)
+  const { error } = await supabase.storage
+    .from('product-images')
+    .remove([path])
+
+  if (error) console.error('CIGGY: image delete error', error)
 }
