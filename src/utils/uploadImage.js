@@ -22,7 +22,7 @@ export const uploadImage = async (file) => {
   // Unique filename: timestamp + random + original extension
   const ext = file.name.split('.').pop() || 'jpg'
   const filename = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`
-  const path = `products/${filename}`
+  const path = filename  // store directly in bucket root
 
   const { error } = await supabase.storage
     .from('product-images')
