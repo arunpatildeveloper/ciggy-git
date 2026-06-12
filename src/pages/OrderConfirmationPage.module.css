@@ -1,0 +1,61 @@
+.page { padding-top: 62px; min-height: 100vh; background: var(--bg-primary); display: flex; align-items: center; justify-content: center; }
+.inner { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 60px 24px; max-width: 520px; gap: 20px; width: 100%; }
+.check {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  border: 1px solid rgba(90,21,24,0.4);
+  background: rgba(90,21,24,0.08);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--accent);
+  font-size: 1.2rem;
+}
+.title { font-family: var(--font-head); font-size: clamp(2rem,5vw,3.2rem); font-weight: 700; letter-spacing: -0.02em; }
+
+.meta { width: 100%; background: var(--bg-charcoal); border: 1px solid var(--border); padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; }
+.metaRow { display: flex; justify-content: space-between; gap: 12px; }
+.metaKey { font-size: 0.7rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+.metaVal { font-size: 0.82rem; font-weight: 600; color: var(--text-light); }
+
+.summary { width: 100%; background: var(--bg-charcoal); border: 1px solid var(--border); padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; text-align: left; }
+.summaryHead { font-size: 0.62rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+.sItem { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.sName { font-size: 0.82rem; font-weight: 500; color: var(--text-light); margin-bottom: 2px; }
+.sMeta { font-size: 0.7rem; color: var(--text-muted); }
+.sPrice { font-size: 0.82rem; color: var(--text-light); white-space: nowrap; }
+.sRow { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); }
+.sTotal { font-size: 0.9rem; font-weight: 600; color: var(--text-light); padding-top: 6px; border-top: 1px solid var(--border); margin-top: 2px; }
+.free { color: #5a8a4a; }
+
+.noOrder { font-size: 0.875rem; color: var(--text-muted); }
+.ctas { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
+
+/* Construction banner */
+.constructionBanner {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--bg-charcoal);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  padding: 14px 16px;
+  text-align: left;
+}
+.constructionIcon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+.constructionTitle {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-light);
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.constructionText {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+  .ctas { flex-direction: column; width: 100%; }
+  .ctas > * { width: 100%; }
+}
