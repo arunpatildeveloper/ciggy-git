@@ -1,45 +1,48 @@
 /* ============================================
    CIGGY — Admin Auth Store (Supabase Auth)
-   
-   Credentials are NEVER stored in frontend code.
-   Login is verified by Supabase on their server.
-   Only a JWT session token is stored locally.
+
+   - No credentials in frontend code ever
+   - Login verified server-side by Supabase
+   - Only a short-lived JWT session token stored
+     in memory by Supabase SDK (not localStorage)
    ============================================ */
 
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 
-const useAuthStore = create((set, get) => ({
+let listenerRegistered = false
+
+const useAuthStore = create((set) => ({
   authed: false,
   session: null,
-  loading: true, // true while checking existing session on load
+  loading: true,
 
-  // Check if a session already exists (called on app mount)
+  // Called once on admin mount — checks existing Supabase session
   init: async () => {
     const { data: { session } } = await supabase.auth.getSession()
     set({ authed: !!session, session, loading: false })
 
-    // Listen for auth state changes (logout from another tab, token refresh, etc.)
-    supabase.auth.onAuthStateChange((_event, session) => {
-      set({ authed: !!session, session })
-    })
+    // Register auth state listener only once
+    if (!listenerRegistered) {
+      listenerRegistered = true
+      supabase.auth.onAuthStateChange((_event, session) => {
+        set({ authed: !!session, session })
+      })
+    }
   },
 
-  // Login — password is sent directly to Supabase, never stored in frontend
+  // Login — password goes to Supabase server, never stored here
   login: async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) return { error: error.message }
     set({ authed: true, session: data.session })
     return { success: true }
   },
 
-  // Logout — clears the Supabase session
+  // Logout — invalidates session on Supabase server
   logout: async () => {
     await supabase.auth.signOut()
-    set({ authed: false, session: null })
+    set({ authed: false, session: null, loading: false })
   },
 }))
 
