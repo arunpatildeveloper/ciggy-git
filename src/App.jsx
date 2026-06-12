@@ -20,7 +20,7 @@ import ProtectedRoute from './admin/ProtectedRoute'
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/ciggy-git/">
       <Routes>
         {/* ── Main site ── */}
         <Route path="/" element={<Layout />}>
