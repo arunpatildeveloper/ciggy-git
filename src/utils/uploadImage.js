@@ -18,7 +18,7 @@ export const uploadImage = async (file) => {
   }
 
   const ext = file.name.split('.').pop() || 'jpg'
-  const filename = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`
+  const filename = `products/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`
 
   const { error } = await supabase.storage
     .from('product-images')
@@ -43,15 +43,22 @@ export const uploadImage = async (file) => {
    Only deletes if the URL is from our own Supabase bucket — ignores external URLs. */
 export const deleteImage = async (url) => {
   if (!url) return
-  // Only delete if it's a Supabase Storage URL for our bucket
+  // Only delete Supabase Storage URLs for our bucket
   const marker = '/object/public/product-images/'
   const idx = url.indexOf(marker)
-  if (idx === -1) return // external URL — don't touch it
+  if (idx === -1) return // external URL — skip
 
-  const path = url.slice(idx + marker.length)
+  // Extract the full path after the bucket name
+  let path = url.slice(idx + marker.length)
+  // Remove any query params
+  path = path.split('?')[0]
+
+  if (!path) return
+
   const { error } = await supabase.storage
     .from('product-images')
     .remove([path])
 
-  if (error) console.error('CIGGY: image delete error', error)
+  if (error) console.error('CIGGY: image delete error', path, error)
+  else console.log('CIGGY: deleted', path)
 }
