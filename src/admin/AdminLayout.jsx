@@ -17,8 +17,8 @@ const AdminLayout = ({ children }) => {
   const logout = useAuthStore((s) => s.logout)
   const navigate = useNavigate()
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     navigate('/admin/login')
   }
 

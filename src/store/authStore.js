@@ -1,37 +1,45 @@
 /* ============================================
-   CIGGY — Admin Auth Store
-   Simple hardcoded credentials for now.
-   Change ADMIN_USER and ADMIN_PASS below.
-   Replace with real auth when going live.
+   CIGGY — Admin Auth Store (Supabase Auth)
+   
+   Credentials are NEVER stored in frontend code.
+   Login is verified by Supabase on their server.
+   Only a JWT session token is stored locally.
    ============================================ */
 
 import { create } from 'zustand'
+import { supabase } from '../lib/supabase'
 
-const SESSION_KEY = 'ciggy_admin_auth'
+const useAuthStore = create((set, get) => ({
+  authed: false,
+  session: null,
+  loading: true, // true while checking existing session on load
 
-// ← Edit these credentials
-const ADMIN_USER = 'ciggy'
-const ADMIN_PASS = 'ciggy2025'
+  // Check if a session already exists (called on app mount)
+  init: async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    set({ authed: !!session, session, loading: false })
 
-const isAuthed = () => {
-  try { return localStorage.getItem(SESSION_KEY) === 'true' } catch { return false }
-}
-
-const useAuthStore = create((set) => ({
-  authed: isAuthed(),
-
-  login: (username, password) => {
-    if (username === ADMIN_USER && password === ADMIN_PASS) {
-      localStorage.setItem(SESSION_KEY, 'true')
-      set({ authed: true })
-      return true
-    }
-    return false
+    // Listen for auth state changes (logout from another tab, token refresh, etc.)
+    supabase.auth.onAuthStateChange((_event, session) => {
+      set({ authed: !!session, session })
+    })
   },
 
-  logout: () => {
-    localStorage.removeItem(SESSION_KEY)
-    set({ authed: false })
+  // Login — password is sent directly to Supabase, never stored in frontend
+  login: async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+    if (error) return { error: error.message }
+    set({ authed: true, session: data.session })
+    return { success: true }
+  },
+
+  // Logout — clears the Supabase session
+  logout: async () => {
+    await supabase.auth.signOut()
+    set({ authed: false, session: null })
   },
 }))
 

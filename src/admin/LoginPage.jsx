@@ -4,7 +4,7 @@ import useAuthStore from '../store/authStore'
 import styles from './LoginPage.module.css'
 
 const LoginPage = () => {
-  const [form, setForm] = useState({ username: '', password: '' })
+  const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const login = useAuthStore((s) => s.login)
@@ -15,19 +15,17 @@ const LoginPage = () => {
     setError('')
   }
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
-    if (!form.username || !form.password) { setError('Enter username and password.'); return }
+    if (!form.email || !form.password) { setError('Enter email and password.'); return }
     setLoading(true)
-    setTimeout(() => {
-      const ok = login(form.username, form.password)
-      if (ok) {
-        navigate('/admin')
-      } else {
-        setError('Wrong username or password.')
-        setLoading(false)
-      }
-    }, 400)
+    const result = await login(form.email, form.password)
+    if (result.success) {
+      navigate('/admin')
+    } else {
+      setError('Wrong email or password.')
+      setLoading(false)
+    }
   }
 
   return (
@@ -40,11 +38,11 @@ const LoginPage = () => {
 
         <form className={styles.form} onSubmit={submit} noValidate>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="username">Username</label>
+            <label className={styles.label} htmlFor="email">Email</label>
             <input
-              id="username" name="username" type="text"
-              value={form.username} onChange={change}
-              className={styles.input} autoComplete="username"
+              id="email" name="email" type="email"
+              value={form.email} onChange={change}
+              className={styles.input} autoComplete="email"
               autoFocus
             />
           </div>
