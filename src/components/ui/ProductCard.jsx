@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom'
+import { useState } from 'react'
 import { formatPrice } from '../../store/productStore'
 import styles from './ProductCard.module.css'
 
 const ProductCard = ({ product, index = 0 }) => {
+  const [imgLoaded, setImgLoaded] = useState(false)
+
   return (
     <Link
       to={`/shop/${product.id}`}
@@ -13,7 +16,16 @@ const ProductCard = ({ product, index = 0 }) => {
       {/* Image */}
       <div className={styles.imageWrap}>
         {product.mainImage ? (
-          <img src={product.mainImage} alt={product.name} className={styles.image} />
+          <>
+            {/* Shimmer shown until image loads */}
+            {!imgLoaded && <div className={styles.imgShimmer} aria-hidden="true" />}
+            <img
+              src={product.mainImage}
+              alt={product.name}
+              className={`${styles.image} ${imgLoaded ? styles.imgVisible : styles.imgHidden}`}
+              onLoad={() => setImgLoaded(true)}
+            />
+          </>
         ) : (
           <div className={styles.imagePlaceholder} aria-hidden="true">
             <PlaceholderIcon />
@@ -36,6 +48,18 @@ const ProductCard = ({ product, index = 0 }) => {
     </Link>
   )
 }
+
+/* Skeleton card — shown while products are loading */
+export const ProductCardSkeleton = () => (
+  <div className={styles.skeleton}>
+    <div className={styles.skeletonImage} />
+    <div className={styles.skeletonInfo}>
+      <div className={styles.skeletonLine} style={{ width: '70%' }} />
+      <div className={styles.skeletonLine} style={{ width: '40%' }} />
+      <div className={styles.skeletonLine} style={{ width: '30%', marginTop: '8px' }} />
+    </div>
+  </div>
+)
 
 const PlaceholderIcon = () => (
   <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import ProductCard from '../components/ui/ProductCard'
+import ProductCard, { ProductCardSkeleton } from '../components/ui/ProductCard'
 import useProductStore from '../store/productStore'
 import styles from './ShopPage.module.css'
 
@@ -57,7 +57,19 @@ const ShopPage = () => {
       </div>
 
       <div className="container">
-        {allProducts.length === 0 ? (
+        {loading && allProducts.length === 0 ? (
+          /* Full page skeleton on first load */
+          <div className={styles.layout}>
+            <aside className={styles.sidebar} />
+            <div className={styles.main}>
+              <div className={styles.grid}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <ProductCardSkeleton key={i} />
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : allProducts.length === 0 ? (
           <EmptyShop />
         ) : (
           <div className={styles.layout}>
@@ -97,7 +109,14 @@ const ShopPage = () => {
                 </select>
               </div>
 
-              {products.length === 0 ? (
+              {loading && allProducts.length === 0 ? (
+                /* Skeleton grid while first load */
+                <div className={styles.grid}>
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <ProductCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : products.length === 0 ? (
                 <div className={styles.noMatch}>
                   <p>No products match.</p>
                   <button className={styles.clearBtn} onClick={() => { setCategory('All'); setSearch('') }}>
